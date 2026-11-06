@@ -1,0 +1,16 @@
+node_modules
+dist
+.next
+.turbo
+coverage
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+**/src/generated
+
+.claude/settings.local.json
+*.log
+next-env.d.ts
+PulseOps_Requerimientos_Especificacion_Tecnica.txt

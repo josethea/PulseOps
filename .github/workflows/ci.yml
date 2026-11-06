@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pulseops
+          POSTGRES_PASSWORD: pulseops_dev
+          POSTGRES_DB: pulseops
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U pulseops"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://pulseops:pulseops_dev@localhost:5433/pulseops
+      WEB_ORIGIN: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Format
+        run: pnpm format:check
+      # The integration tests run against the seeded demo database.
+      - name: Migrate and seed
+        run: |
+          pnpm --filter @pulseops/api db:deploy
+          pnpm --filter @pulseops/api db:seed
+      - name: Lint, typecheck, build and test
+        run: pnpm turbo run lint typecheck build test
